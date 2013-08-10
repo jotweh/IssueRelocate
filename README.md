@@ -12,6 +12,13 @@ There are just 2 steps:
 1.export from source repo on github (RZ-gh-issues-export.py)
 2.import to new repo on github (RZ-gh-issues-import.py)
 
+### About this fork
+In addition this fork provides also a simple issue copy script to copy issues from one repository to another. 
+* Usage: <pre>python gh-issue-import-simple.py</pre>
+* Supports private repositories as well
+* Will display the issue in json format and ask you to confirm before copying
+
+
 HOW TO USE RZ-gh-issues-export.py
 ---------------------------------
 
