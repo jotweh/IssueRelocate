@@ -40,10 +40,26 @@ def get_comments_on_issue(issue):
 	  and issue["comments"] != 0:
 		response = request('get_comments_on_issue', "%s/comments" % issue["url"])
 		result = response.read()
-		comments = json.load(StringIO(result))
-		return comments
+		return json.load(StringIO(result))
 	else :
 		return []
+
+def create_comment(commentcontent, repourl, issuenr):
+    comment = json.dumps({
+        "body": commentcontent
+    })
+    response = request('create_comment', "%s/issues/%s/comments" % (repourl, issuenr), comment)
+    result = response.read()
+    return json.load(StringIO(result))
+
+# close an issue on github
+def close_issue(repourl, issuenr):
+    content = json.dumps({
+        "state": "closed"
+    })
+    response = request('close_issue', "%s/issues/%s" % (repourl, issuenr), content)
+    result = response.read()
+    return json.load(StringIO(result))
 
 # import an issue only with assignee and body
 def import_issue_simple(source):
@@ -55,31 +71,46 @@ def import_issue_simple(source):
     if source.has_key("body") and source["body"] is not None:
         body = source["body"]
 
+    milestone = None
+    if source.has_key("milestone") and source["milestone"] is not None:
+            milestone = source["milestone"]["number"]
 
+    labels = []
+    if source.has_key("labels"):
+        for label in source["labels"]:
+            labels.append(label["name"])
+
+
+    # build target issue
     dest = json.dumps({
         "title": source["title"],
         "body": body,
         "assignee": assignee,
-        "milestone": None,
-        "labels": []
-    })
+        "milestone": milestone,
+        "labels": labels
+    }, sort_keys = False, indent = 2)
+
+    print dest
 
     res = request('import_issues', "%s/issues" % dst_url, dest)
     data = res.read()
     res_issue = json.load(StringIO(data))
-    print "Successfully created issue %s" % res_issue["title"]
+    print "Successfully created issue %s. new issue number is %s" % (res_issue["title"], res_issue["number"])
 
-    # todo: import comment for issue
-    comments = get_comments_on_issue(source)
+    ## add comment to old issue with hint to new one and close it
+    if res_issue.has_key("number"):
+        removecomment = "auto-moving this issue to %s#%s and closing this one" % (dst_repo,res_issue["number"])
+        print removecomment
+        create_comment(removecomment, src_url, source["number"])
+        close_issue(src_url, source["number"])
 
 def main():
 	#process issues
 	issue = get_issue(src_url, issuenumber)
-	print issue
+	print json.dumps(issue, sort_keys = False, indent = 2)
 	doImport = raw_input("import this issue to %s? (y/n) " % dst_url)
 	if doImport == "y":
 	    import_issue_simple(issue)
-
 
 if __name__ == '__main__':
 	main()
